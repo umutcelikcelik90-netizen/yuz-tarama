@@ -1,0 +1,66 @@
+name: Android Otomatik APK Derleyici Kanka
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Android APK Derle ve Paketle
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Depoyu Kopyala (Checkout Repository)
+      uses: actions/checkout@v4
+
+    - name: Node.js Ortamini Kur (Setup Node.js)
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Java (JDK) Ortamini Yapilandir (Setup Java JDK 17)
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Android SDK Ortamini Hazirla (Setup Android SDK)
+      uses: android-actions/setup-android@v3
+
+    - name: Cordova CLI Kurulumu ve Proje Olusturma
+      run: |
+        echo "Kanka Cordova yukleniyor..."
+        npm install -g cordova
+        
+        echo "Cordova projesi baslatiliyor..."
+        cordova create myApp com.kanka.yarisoyunu KankaYaris
+        cd myApp
+        
+        echo "Android platformu ekleniyor..."
+        cordova platform add android
+        
+        echo "HTML oyun dosyamiz www klasörüne aktariliyor..."
+        if [ -f "../index.html" ]; then
+          cp ../index.html www/index.html
+          echo "index.html basariyla www dizinine kopyalandi kanka!"
+        else
+          echo "Hata: Ana dizinde index.html bulunamadi!"
+          exit 1
+        fi
+
+    - name: Android APK Dosyasini Derle (Cordova Build Release)
+      run: |
+        cd myApp
+        echo "APK derleme islemi baslatiliyor kanka, biraz surebilir..."
+        cordova build android --release
+        
+        echo "Derlenen APK dosyalari araniyor..."
+        find platforms/android/app/build/outputs/apk -name "*.apk"
+
+    - name: APK Dosyasini Disari Aktar (Upload Artifact)
+      uses: actions/upload-artifact@v4
+      with:
+        name: kanka-yaris-oyunu-apk
+        path: myApp/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk
+        
